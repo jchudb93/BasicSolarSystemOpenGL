@@ -20,7 +20,7 @@ GLint uniform_mvp;
 GLint uniform_model;
 
 //Variables para el movimiento
-GLfloat alpha=0.0, beta=0.0, theta=0.0, phi=0.0;
+GLfloat alpha=0.0, beta=0.0, theta=0.0, phi=0.0,gamma=0.0;
 
 GLfloat t = 1.0f*glutGet(GLUT_ELAPSED_TIME);
 
@@ -173,12 +173,14 @@ bool init_resources(){
     scene.meshes[0] = leerOFF("sphere.off"); //Sol
     scene.meshes[1] = leerOFF("sphere.off"); //Tierra
     scene.meshes[2] = leerOFF("sphere.off"); //Luna
+    scene.meshes[3] = leerOFF("saturno.off");
 
-    scene.numMeshes = 3;
+    scene.numMeshes = 4;
 
     init_buffers(scene.meshes[0]);
     init_buffers(scene.meshes[1]);
     init_buffers(scene.meshes[2]);
+    init_buffers(scene.meshes[3]);
 
     GLint link_ok = GL_FALSE;
     GLuint vs, fs;
@@ -280,6 +282,7 @@ void animacion(){
     beta += (delta/60.0f) * glm::radians(1.0f);
     theta += (delta/60.0f) * glm::radians(1.0f);
     phi += (delta/60.0f) * glm::radians(1.0f);
+    gamma += (delta/30.0f) * glm::radians(1.0f);
 
 
     //generar transformaciones  para la tierra en scene.meshes[1]
@@ -297,10 +300,18 @@ void animacion(){
         glm::translate(glm::mat4(1.0f),glm::vec3(1.0f,0.0f,0.0f))*
         glm::rotate(glm::mat4(1.0f),phi,glm::vec3(0.0,1.0f,0.0f))*
         glm::scale(glm::mat4(1.0f),glm::vec3(0.1f,0.1f,0.1f));
+    scene.meshes[3]->model_transform = 
+        glm::rotate(glm::mat4(1.0f),gamma,glm::vec3(0.0f,1.0f,0.0f))*
+        glm::translate(glm::mat4(1.0f),glm::vec3(9.0f,0.0f,0.0f))*
+        glm::rotate(glm::mat4(1.0f),theta,glm::vec3(0.0f,1.0f,0.0f))*
+        glm::rotate(glm::mat4(1.0f),glm::radians(30.0f),glm::vec3(0.0f,1.0f,1.0f))*
+        glm::rotate(glm::mat4(1.0f),glm::radians(90.0f),glm::vec3(1.0f,0.0f,0.0f))*
+        glm::scale(glm::mat4(1.0f),glm::vec3(0.5f,.5f,.5f));
+
 
     //forzar redisplay
     glutPostRedisplay();
-
+ 
 
 }
 
