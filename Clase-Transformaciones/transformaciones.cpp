@@ -20,7 +20,7 @@ GLint uniform_mvp;
 GLint uniform_model;
 
 //Variables para el movimiento
-GLfloat alfa=0.0, beta=0.0, theta=0.0, phi=0.0;
+GLfloat alpha=0.0, beta=0.0, theta=0.0, phi=0.0;
 
 GLfloat t = 1.0f*glutGet(GLUT_ELAPSED_TIME);
 
@@ -270,6 +270,40 @@ void onReshape(int w, int h){
     glViewport(0,0,screen_width, screen_height);
 }
 
+void animacion(){
+    GLfloat t1 = 1.0f * glutGet(GLUT_ELAPSED_TIME);
+    GLfloat delta = t1-t;
+
+    t = t1;
+
+    alpha += (delta/60.0f) * glm::radians(1.0f);
+    beta += (delta/60.0f) * glm::radians(1.0f);
+    theta += (delta/60.0f) * glm::radians(1.0f);
+    phi += (delta/60.0f) * glm::radians(1.0f);
+
+
+    //generar transformaciones  para la tierra en scene.meshes[1]
+    scene.meshes[1]->model_transform = 
+        glm::rotate(glm::mat4(1.0f),alpha,glm::vec3(0.0,1.0f,0.0f))*
+        glm::translate(glm::mat4(1.0f),glm::vec3(5.0f,0.0f,0.0f))*
+        glm::rotate(glm::mat4(1.0f),beta,glm::vec3(0.0,1.0f,0.0f))*
+        glm::scale(glm::mat4(1.0f),glm::vec3(0.4f,0.4f,0.4f));
+
+    //generar transformaciones para la luna en scene.meshes[2]
+    scene.meshes[2]->model_transform = 
+        glm::rotate(glm::mat4(1.0f),alpha,glm::vec3(0.0,1.0f,0.0f))*
+        glm::translate(glm::mat4(1.0f),glm::vec3(5.0f,0.0f,0.0f))*
+        glm::rotate(glm::mat4(1.0f),theta,glm::vec3(0.0,1.0f,0.0f))*
+        glm::translate(glm::mat4(1.0f),glm::vec3(1.0f,0.0f,0.0f))*
+        glm::rotate(glm::mat4(1.0f),phi,glm::vec3(0.0,1.0f,0.0f))*
+        glm::scale(glm::mat4(1.0f),glm::vec3(0.1f,0.1f,0.1f));
+
+    //forzar redisplay
+    glutPostRedisplay();
+
+
+}
+
 void free_resources(){
     glDeleteProgram(program);
 
@@ -309,6 +343,7 @@ int main(int argc, char* argv[]){
         glEnable(GL_BLEND);
         glEnable(GL_DEPTH_TEST);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glutIdleFunc(animacion);
         glutMainLoop();
     }
 
