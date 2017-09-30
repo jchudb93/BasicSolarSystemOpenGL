@@ -223,7 +223,7 @@ void graficarObjeto(Mesh* mesh){
     //Creamos matrices de modelo, vista y proyeccion
     glm::mat4 model =   mesh->model_transform;
 
-    glm::mat4 view  = glm::lookAt(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 view  = glm::lookAt(glm::vec3(cos(alpha)*10.0f, 10.0f, sin(alpha)*10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)); //donde está la camara, hacia donde ve y referencia de la orientación
     glm::mat4 projection = glm::perspective(45.0f, 1.0f*screen_width/screen_height, 0.1f, 100.0f);
     glm::mat4 mvp = projection * view ;
 
