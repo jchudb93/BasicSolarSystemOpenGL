@@ -1,2 +1,2 @@
-# BasicSolarSystemOpenGL
-Basic solar system using OpenGL
+# Computer Graphics OpenGL
+Computer graphics using OpenGl
