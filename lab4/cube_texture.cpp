@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string>
+#include <cstring>
 
 #include <GL/glew.h>
-
+#include <vector>
 #include <GL/freeglut.h>
 
 #define GLM_FORCE_RADIANS
@@ -13,6 +15,13 @@
 #include "shader_utils.h"
 
 #include "res_texture.c"
+
+#define FOURCC_DXT1 0x31545844 
+#define FOURCC_DXT3 0x33545844 
+#define FOURCC_DXT5 0x35545844 
+
+
+
 
 int screen_width=800, screen_height=600;
 GLuint vbo_cube_vertices;
@@ -28,8 +37,197 @@ GLint attribute_texcoord;
 GLuint texture_id;
 GLint uniform_texture;
 
+
+GLuint cargarTextura(const char * imagepath){
+
+  unsigned char header[124];
+
+  FILE *fp; 
+ 
+  
+  fp = fopen(imagepath, "rb"); 
+  if (fp == NULL){
+    printf("%s no se pudo abrir el archivo\n", imagepath); getchar(); 
+    return 0;
+  }
+   
+  
+  char filecode[4]; 
+  fread(filecode, 1, 4, fp); 
+  if (strncmp(filecode, "DDS ", 4) != 0) { 
+    fclose(fp); 
+    return 0; 
+  }
+  
+  
+  fread(&header, 124, 1, fp); 
+
+  unsigned int height      = *(unsigned int*)&(header[8 ]);
+  unsigned int width       = *(unsigned int*)&(header[12]);
+  unsigned int linearSize  = *(unsigned int*)&(header[16]);
+  unsigned int mipMapCount = *(unsigned int*)&(header[24]);
+  unsigned int fourCC      = *(unsigned int*)&(header[80]);
+
+ 
+  unsigned char * buffer;
+  unsigned int bufsize;
+  
+  bufsize = mipMapCount > 1 ? linearSize * 2 : linearSize; 
+  buffer = (unsigned char*)malloc(bufsize * sizeof(unsigned char)); 
+  fread(buffer, 1, bufsize, fp); 
+  
+  fclose(fp);
+
+  unsigned int components  = (fourCC == FOURCC_DXT1) ? 3 : 4; 
+  unsigned int format;
+  switch(fourCC) 
+  { 
+  case FOURCC_DXT1: 
+    format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT; 
+    break; 
+  case FOURCC_DXT3: 
+    format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT; 
+    break; 
+  case FOURCC_DXT5: 
+    format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT; 
+    break; 
+  default: 
+    free(buffer); 
+    return 0; 
+  }
+
+  
+  GLuint textureID;
+  glGenTextures(1, &textureID);
+
+
+  glBindTexture(GL_TEXTURE_2D, textureID);
+  glPixelStorei(GL_UNPACK_ALIGNMENT,1); 
+  
+  unsigned int blockSize = (format == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) ? 8 : 16; 
+  unsigned int offset = 0;
+
+  
+  for (unsigned int level = 0; level < mipMapCount && (width || height); ++level) 
+  { 
+    unsigned int size = ((width+3)/4)*((height+3)/4)*blockSize; 
+    glCompressedTexImage2D(GL_TEXTURE_2D, level, format, width, height,  
+      0, size, buffer + offset); 
+   
+    offset += size; 
+    width  /= 2; 
+    height /= 2; 
+
+    
+    if(width < 1) width = 1;
+    if(height < 1) height = 1;
+
+  } 
+
+  free(buffer); 
+
+  return textureID;
+
+
+}
+
+bool cargarOBJ(const char * path,   
+  std::vector<glm::vec3> & vertices,
+  std::vector<glm::vec2> & uvs,
+  std::vector<glm::vec3> & normales){
+  printf("cargando archivo %s\n", path);
+
+  std::vector<unsigned int> vertexIndices, uvIndices, normalIndices;
+  std::vector<glm::vec3> temp_vertices; 
+  std::vector<glm::vec2> temp_uvs;
+  std::vector<glm::vec3> temp_normals;
+
+  FILE * file = fopen(path,"r");
+  if(file == NULL){
+    printf("no se pudo cargar el archivo\n");
+    getchar();
+    return false;
+  }
+
+  for(;;){
+    char linea[128];
+
+    int res = fscanf(file,"%s",linea);
+    if(res == EOF) break;
+
+    if(strcmp(linea,"v") ==0){
+      glm::vec3 vertex;
+      fscanf(file,"%f %f %f \n", &vertex.x, &vertex.y, &vertex.z);
+      temp_vertices.push_back(vertex);
+    }else if(strcmp(linea,"vt")==0){
+      glm::vec2 uv;
+      fscanf(file,"%f %f\n",&uv.x,&uv.y);
+      uv.y= -uv.y;
+      temp_uvs.push_back(uv);
+    }else if (strcmp(linea,"vn")==0){
+      glm::vec3 normal;
+      fscanf(file,"%f %f %f\n",&normal.x,&normal.y,&normal.z);
+      temp_normals.push_back(normal);
+    }else if(strcmp(linea,"f")==0){
+      unsigned int vertexIndex[3],uvIndex[3],normalIndex[3];
+      int matches = fscanf(file, "%d %d %d %d %d %d %d %d %d\n", &vertexIndex[0], &uvIndex[0], &normalIndex[0], &vertexIndex[1], &uvIndex[1], &normalIndex[1], &vertexIndex[2], &uvIndex[2], &normalIndex[2] );
+      if(matches != 9){
+        printf("%s\n", "no se pudo leer el archivo");
+        fclose(file);
+        return false;
+      }
+      vertexIndices.push_back(vertexIndex[0]);
+      vertexIndices.push_back(vertexIndex[1]);
+      vertexIndices.push_back(vertexIndex[2]);
+      uvIndices.push_back(uvIndex[0]);
+      uvIndices.push_back(uvIndex[1]);
+      uvIndices.push_back(uvIndex[2]);
+      normalIndices.push_back(normalIndex[0]);
+      normalIndices.push_back(normalIndex[1]);
+      normalIndices.push_back(normalIndex[2]);
+    }else {
+      char bufferaux[10000];
+      fgets(bufferaux,1000,file);
+    }
+
+
+  }
+
+    for( unsigned int i=0; i<vertexIndices.size(); i++ ){
+
+    
+    unsigned int vertexIndex = vertexIndices[i];
+    unsigned int uvIndex = uvIndices[i];
+    unsigned int normalIndex = normalIndices[i];
+    
+    
+    glm::vec3 vertex = temp_vertices[ vertexIndex-1 ];
+    glm::vec2 uv = temp_uvs[ uvIndex-1 ];
+    glm::vec3 normal = temp_normals[ normalIndex-1 ];
+    
+    
+    vertices.push_back(vertex);
+    uvs.push_back(uv);
+    normales .push_back(normal);
+  
+  }
+  fclose(file);
+  return true;
+
+}
+
+
 int init_resources()
 {
+
+  GLuint textura = cargarTextura("House_3_AO.dds");
+
+  std::vector<glm::vec3> vertices;
+  std::vector<glm::vec2> uvs;
+  std::vector<glm::vec3> normales;
+  bool res;
+  res = cargarOBJ("House_3_AO.obj",vertices,uvs,normales);
+
   GLfloat cube_vertices[] = {
     // front
     -1.0, -1.0,  1.0,
@@ -63,9 +261,11 @@ int init_resources()
      1.0,  1.0,  1.0,
   };
 
-  glGenBuffers(1, &vbo_cube_vertices);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_vertices);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
+  GLuint vertexbuffer;
+
+  glGenBuffers(1, &vertexbuffer);
+  glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+  glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
 
   GLfloat cube_texcoords[48];
 
@@ -78,12 +278,13 @@ int init_resources()
     cube_texcoords[i] = cube_texcoords[i%8];
   }
 
-  glGenBuffers(1, &vbo_cube_texcoords);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_texcoords);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(cube_texcoords),
-               cube_texcoords, GL_STATIC_DRAW);
+  GLuint uvbuffer;
+  glGenBuffers(1, &uvbuffer);
+  glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
+  glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
 
-    GLushort cube_elements[] = {
+
+  GLushort cube_elements[] = {
     // front
     0,  1,  2,
     2,  3,  0,

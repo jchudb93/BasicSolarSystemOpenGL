@@ -11,6 +11,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "shader_utils.h"
+#include "SOIL.h"
 
 #include "res_texture.c"
 
@@ -27,6 +28,8 @@ GLint attribute_texcoord;
 
 GLuint texture_id;
 GLint uniform_texture;
+
+unsigned char* imag;
 
 int init_resources()
 {
@@ -108,20 +111,23 @@ int init_resources()
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_elements), cube_elements, GL_STATIC_DRAW);
 
-  glGenTextures(1, &texture_id); 
+  glGenTextures(1, &texture_id);
   glBindTexture(GL_TEXTURE_2D, texture_id);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
                   GL_LINEAR);
 
+  int width, height, channel;
+  imag = SOIL_load_image("pattern2.jpg", &width, &height, &channel, SOIL_LOAD_AUTO);
+
   glTexImage2D(GL_TEXTURE_2D,
-               0,//niveles de resolucion
-               GL_RGB,//formato del pixel
-               res_texture.width, //ancho de la imagen
-               res_texture.height, //alto de la imagen
-               0,//desplazamiento de la textura
-               GL_RGB,//formato de la info
-               GL_UNSIGNED_BYTE,//tipo de dato de la textura
-               res_texture.pixel_data); //formato de los pixeles
+               0,
+               GL_RGB,
+               width,
+               height,
+               0,
+               GL_RGB,
+               GL_UNSIGNED_BYTE,
+               imag);
 
 
   GLint link_ok = GL_FALSE;
@@ -248,6 +254,7 @@ void free_resources()
   glDeleteBuffers(1, &ibo_cube_elements);
   glDeleteBuffers(1, &vbo_cube_texcoords);
   glDeleteTextures(1, &texture_id);
+  SOIL_free_image_data(imag);
 }
 
 
